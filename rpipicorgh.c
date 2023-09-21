@@ -4,9 +4,12 @@
 
 #include "hardware/vreg.h"
 #include "hardware/clocks.h"
+#include "hardware/pll.h"
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
 #include "glitch.pio.h"
+#include "hardware/structs/pll.h"
+#include "hardware/structs/clocks.h"
 
 #define CPU_RESET_PIN 11
 #define PLL_BYPASS_PIN 12
