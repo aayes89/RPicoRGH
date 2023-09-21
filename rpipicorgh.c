@@ -48,10 +48,15 @@ void performGlitch() {
 
 
 int main(void) {
-    vreg_set_voltage(VREG_VOLTAGE_1_30);
+    // Voltage min 0.85 (0b0110) y máx 1.30 (0b1111)
+    vreg_set_voltage(VREG_VOLTAGE_1_30); 
+    
+    Establecer frecuencia del reloj de sistema en khz
     set_sys_clock_khz(266000, true);
-
+    
+    // Obtengo frecuencia del reloj de sistema, puede incluir índice como parámetro
     uint32_t freq = clock_get_hz(clk_sys);
+    
     //CLOCKS_CLK_PERI_CTRL_AUXSRC_A.CLK_SYS 
     /*
     pub enum AUXSRC_A {
@@ -64,30 +69,33 @@ int main(void) {
         CLKSRC_GPIN1,
     }
     */
-    clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_A_CLK_SYS, freq, freq);
+    // Vía simple para trabajar con el PLL_USB, cambiar (freq) por la requerida * MHZ
+    // Comentar línea donde se obtiene la frequencia para modo manual
+    clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS, freq, freq);
 
     // Configurar los pines GPIO
     configurePins();
-
+    
+    // loop infinito
     while (1) {
-        // Esperar hasta que se cumpla una condición específica en el pin GPIO_TRIGGER_PIN (loop infinito)
+        // Esperar hasta que se cumpla una condición específica en el pin GPIO_TRIGGER_PIN 
         while (!gpio_get(GPIO_TRIGGER_PIN));
 
+        // Encender el LED de depuración
+        gpio_put(DEBUG_LED_PIN, 1);
+        
         // Realizar glitching
         performGlitch();
 
         // Esperar un tiempo antes de continuar
         sleep_ms(200);
 
-        // Encender el LED de depuración
-        gpio_put(DEBUG_LED_PIN, 1);
-
-        // Realizar más operaciones si es necesario
+        // Realizar más operaciones si lo desea
 
         // Apagar el LED de depuración
         gpio_put(DEBUG_LED_PIN, 0);
 
-        // Esperar hasta que se libere la condición en GPIO_TRIGGER_PIN (loop infinito)
+        // Esperar hasta que se libere la condición en GPIO_TRIGGER_PIN
         while (gpio_get(GPIO_TRIGGER_PIN));
     }
 
