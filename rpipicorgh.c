@@ -58,9 +58,8 @@ int main(void) {
     configurePins();
 
     while (1) {
-        // Esperar hasta que se cumpla una condición específica en el pin GPIO_TRIGGER_PIN
-        while (!gpio_get(GPIO_TRIGGER_PIN))
-            ;
+        // Esperar hasta que se cumpla una condición específica en el pin GPIO_TRIGGER_PIN (loop infinito)
+        while (!gpio_get(GPIO_TRIGGER_PIN));
 
         // Realizar glitching
         performGlitch();
@@ -76,9 +75,8 @@ int main(void) {
         // Apagar el LED de depuración
         gpio_put(DEBUG_LED_PIN, 0);
 
-        // Esperar hasta que se libere la condición en GPIO_TRIGGER_PIN
-        while (gpio_get(GPIO_TRIGGER_PIN))
-            ;
+        // Esperar hasta que se libere la condición en GPIO_TRIGGER_PIN (loop infinito)
+        while (gpio_get(GPIO_TRIGGER_PIN));
     }
 
     return 0;
