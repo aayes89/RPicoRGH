@@ -52,7 +52,19 @@ int main(void) {
     set_sys_clock_khz(266000, true);
 
     uint32_t freq = clock_get_hz(clk_sys);
-    clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS, freq, freq);
+    //CLOCKS_CLK_PERI_CTRL_AUXSRC_A.CLK_SYS 
+    /*
+    pub enum AUXSRC_A {
+        CLK_SYS,
+        CLKSRC_PLL_SYS,
+        CLKSRC_PLL_USB,
+        ROSC_CLKSRC_PH,
+        XOSC_CLKSRC,
+        CLKSRC_GPIN0,
+        CLKSRC_GPIN1,
+    }
+    */
+    clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_A_CLK_SYS, freq, freq);
 
     // Configurar los pines GPIO
     configurePins();
