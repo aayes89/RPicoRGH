@@ -13,7 +13,7 @@
 #define DEBUG_LED_PIN 25
 #define GPIO_TRIGGER_PIN 15
 
-// Función para configurar los pines GPIO
+// Función para configurar los pines GPIO en RP2040
 void configurePins() {
     gpio_init(CPU_RESET_PIN);
     gpio_init(PLL_BYPASS_PIN);
