@@ -16,7 +16,7 @@
 #define DEBUG_LED_PIN 25
 #define GPIO_TRIGGER_PIN 15
 
-
+// Función para medir frecuencias
 void measure_freqs(void) {
     uint f_pll_sys = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_PLL_SYS_CLKSRC_PRIMARY);
     uint f_pll_usb = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_PLL_USB_CLKSRC_PRIMARY);
@@ -39,93 +39,79 @@ void measure_freqs(void) {
 
 // Función para configurar los pines GPIO en RP2040
 void configurePins() {
+    // Inicializar pines
     gpio_init(CPU_RESET_PIN);
     gpio_init(PLL_BYPASS_PIN);
     gpio_init(DEBUG_LED_PIN);
-    gpio_set_dir(CPU_RESET_PIN, GPIO_IN);
-    gpio_set_dir(PLL_BYPASS_PIN, GPIO_OUT);
-    gpio_set_dir(DEBUG_LED_PIN, GPIO_OUT);
-    gpio_set_slew_rate(CPU_RESET_PIN, GPIO_SLEW_RATE_FAST);
-    gpio_set_drive_strength(CPU_RESET_PIN, GPIO_DRIVE_STRENGTH_12MA);
+    gpio_init(GPIO_TRIGGER_PIN);
+    
+    // Configurar direcciones
+    gpio_set_dir(CPU_RESET_PIN, GPIO_IN);  // Entrada
+    gpio_set_dir(PLL_BYPASS_PIN, GPIO_OUT);  // Salida
+    gpio_set_dir(DEBUG_LED_PIN, GPIO_OUT);  // Salida
+    gpio_set_dir(GPIO_TRIGGER_PIN, GPIO_IN);  // Entrada
+    
+    // Configurar características de pines de salida
     gpio_set_slew_rate(PLL_BYPASS_PIN, GPIO_SLEW_RATE_FAST);
     gpio_set_drive_strength(PLL_BYPASS_PIN, GPIO_DRIVE_STRENGTH_12MA);
+    
+    // Si el pin CPU_RESET_PIN no requiere configuración de velocidad y fuerza, se omite
 }
 
 // Función para realizar glitching
-void performGlitch() {
-    // Configurar los parámetros de glitching (estos valores son solo ejemplos)
-    uint32_t glitchWidth = 10;   // Ancho del pulso de glitch en ciclos de reloj
-    uint32_t glitchDelay = 100;  // Retraso antes del glitch en ciclos de reloj
+void performGlitch(uint32_t glitchWidth, uint32_t glitchDelay) {
+    // Activar el pin PLL_BYPASS_PIN
+    gpio_put(PLL_BYPASS_PIN, 1);
 
-    // Realizar glitching manipulando un pin GPIO específico
-    gpio_put(PLL_BYPASS_PIN, 1);  // Activa el pin PLL_BYPASS_PIN
+    // Aplicar el glitch con el retraso especificado
+    sleep_us(glitchDelay);
+    gpio_put(PLL_BYPASS_PIN, 0);
 
-    // Aplicar el glitch (puede variar según el objetivo)
-    sleep_us(glitchDelay);       // Esperar el retraso antes del glitch
-    gpio_put(PLL_BYPASS_PIN, 0);  // Desactivar el pin PLL_BYPASS_PIN
-
-    // Realizar más operaciones de glitching si es necesario
-
-    // Esperar a que se complete el glitch
+    // Esperar el tiempo del ancho del glitch
     sleep_us(glitchWidth);
 }
 
-
 int main(void) {
-    // Medir la frecuencia
+    // Medir las frecuencias iniciales
     measure_freqs();
     
-    // Voltage min 0.85 (0b0110) y máx 1.30 (0b1111)
+    // Configurar el voltaje del regulador
     vreg_set_voltage(VREG_VOLTAGE_1_30); 
     
-    Establecer frecuencia del reloj de sistema en khz
+    // Establecer la frecuencia del reloj del sistema en kHz
     set_sys_clock_khz(266000, true);
     
-    // Obtengo frecuencia del reloj de sistema, puede incluir índice como parámetro
+    // Obtener y usar la frecuencia del reloj del sistema
     uint32_t freq = clock_get_hz(clk_sys);
     
-    // Liberar/des-inicializar el PLL especificado del RP2040
-    // pll_sys: hasta 180MHZ y pll_usb: hasta 48MHZ
-    // pll_deinit(pll_sys);
-    
-    // Trabajar con el PLL_USB, cambiar (freq) por la requerida * MHZ
-    // Comentar línea donde se obtiene la frequencia para modo manual
-    /*
-    pub enum AUXSRC_A {
-        CLK_SYS,
-        CLKSRC_PLL_SYS,
-        CLKSRC_PLL_USB,
-        ROSC_CLKSRC_PH,
-        XOSC_CLKSRC,
-        CLKSRC_GPIN0,
-        CLKSRC_GPIN1,
-    }
-    */
+    // Configurar el reloj periférico para usar la frecuencia del reloj del sistema
     clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS, freq, freq);
     
     // Configurar los pines GPIO
     configurePins();
     
-    // loop infinito
+    // Parámetros para el glitching
+    uint32_t glitchWidth = 10;   // Ancho del pulso de glitch en ciclos de reloj
+    uint32_t glitchDelay = 100;  // Retraso antes del glitch en ciclos de reloj
+
+    // Bucle infinito
     while (1) {
-        // Esperar hasta que se cumpla una condición específica en el pin GPIO_TRIGGER_PIN 
+        // Esperar a que se cumpla la condición en GPIO_TRIGGER_PIN
         while (!gpio_get(GPIO_TRIGGER_PIN));
 
         // Encender el LED de depuración
         gpio_put(DEBUG_LED_PIN, 1);
         
         // Realizar glitching
-        performGlitch();
+        performGlitch(glitchWidth, glitchDelay);
 
         // Esperar un tiempo antes de continuar
         sleep_ms(200);
 
-        // Realizar más operaciones si lo desea
-
         // Apagar el LED de depuración
         gpio_put(DEBUG_LED_PIN, 0);
 
-        // Esperar hasta que se libere la condición en GPIO_TRIGGER_PIN
+        // Esperar a que se libere la condición en GPIO_TRIGGER_PIN
         while (gpio_get(GPIO_TRIGGER_PIN));
     }
 
