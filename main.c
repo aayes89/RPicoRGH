@@ -1,111 +1,77 @@
 /*
- * Copyright (c) 2022 Balázs Triszka <balika011@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+*  Creado por Slam (01/04/2025)
+*  Sólo para pruebas en placa Xenon
+*/
 
-#include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
-
-/*
- * Copyright (c) 2022 Balázs Triszka <balika011@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-#include "hardware/vreg.h"
-#include "hardware/clocks.h"
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
-#include "glitch.pio.h"
+#include "hardware/irq.h"
+#include "glitch.pio.h"  // Archivo generado desde el código PIO
 
-#define CPU_RESET 11
-#define PLL_BYPASS 12
-#define DEBUG_LED 25
+// Configuración de pines
+#define CPU_RESET_PIN    11   // Pin para monitorear el reset de la Xbox
+#define GLITCH_OUT_PIN   12   // Pin para inyectar el glitch
+#define DEBUG_LED_PIN    25   // LED integrado del Pico
 
-int main(void)
-{
-	vreg_set_voltage(VREG_VOLTAGE_1_30);
-	set_sys_clock_khz(266000, true);
+// Parámetros del glitch (ajustar empíricamente)
+#define GLITCH_DELAY_CYCLES  20   // Retardo después del reset (ciclos PIO)
+#define GLITCH_WIDTH_CYCLES  3    // Ancho del pulso (ciclos PIO)
 
-	uint32_t freq = clock_get_hz(clk_sys);
-	clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS, freq, freq);
+// Variables globales
+volatile bool trigger_glitch = false;
+PIO glitch_pio = pio0;
+uint glitch_sm = 0;
 
-	while (1)
-	{
-		gpio_init(CPU_RESET);
-		gpio_set_dir(CPU_RESET, GPIO_IN);
-		gpio_set_slew_rate(CPU_RESET, GPIO_SLEW_RATE_FAST);
-		gpio_set_drive_strength(CPU_RESET, GPIO_DRIVE_STRENGTH_12MA);
-		while (!gpio_get(CPU_RESET))
-			;
+// Interrupción para detectar el flanco de reset
+void gpio_irq_handler(uint gpio, uint32_t events) {
+    if (gpio == CPU_RESET_PIN && (events & GPIO_IRQ_EDGE_FALL)) {
+        trigger_glitch = true;
+    }
+}
 
-		uint offset = pio_add_program(pio0, &glitch_program);
-		pio_sm_config c = glitch_program_get_default_config(offset);
-		sm_config_set_sideset_pins(&c, CPU_RESET);
+// Programa PIO para generar pulsos de alta precisión
+void init_glitch_pio() {
+    uint offset = pio_add_program(glitch_pio, &glitch_program);
+    pio_sm_config cfg = glitch_program_get_default_config(offset);
+    
+    sm_config_set_out_pins(&cfg, GLITCH_OUT_PIN, 1);
+    sm_config_set_clkdiv(&cfg, 1.0);  // Máxima velocidad (125 MHz → 8 ns/ciclo)
+    
+    pio_sm_init(glitch_pio, glitch_sm, offset, &cfg);
+    pio_sm_set_enabled(glitch_pio, glitch_sm, true);
+}
 
-		pio_gpio_init(pio0, CPU_RESET);
-		gpio_set_slew_rate(CPU_RESET, GPIO_SLEW_RATE_FAST);
-		gpio_set_drive_strength(CPU_RESET, GPIO_DRIVE_STRENGTH_12MA);
-
-		pio_gpio_init(pio0, PLL_BYPASS);
-		gpio_set_slew_rate(PLL_BYPASS, GPIO_SLEW_RATE_FAST);
-		gpio_set_drive_strength(PLL_BYPASS, GPIO_DRIVE_STRENGTH_12MA);
-
-		pio_sm_set_pins_with_mask(pio0, 0, (1u << CPU_RESET) | (0u << PLL_BYPASS), (1u << CPU_RESET) | (1u << PLL_BYPASS));
-		pio_sm_set_pindirs_with_mask(pio0, 0, (1u << CPU_RESET) | (1u << PLL_BYPASS), (1u << CPU_RESET) | (1u << PLL_BYPASS));
-
-		pio_sm_init(pio0, 0, offset, &c);
-		pio_sm_set_enabled(pio0, 0, true);
-
-		sleep_ms(200);
-
-		gpio_init(DEBUG_LED);
-		gpio_set_dir(DEBUG_LED, GPIO_OUT);
-		gpio_put(DEBUG_LED, 1);
-
-		pio_sm_put_blocking(pio0, 0, 3);		 // post bits
-		pio_sm_put_blocking(pio0, 0, 144686585); // delay from 11 post to pll pull up
-		pio_sm_put_blocking(pio0, 0, 9693040);	 // delay from post going up to rst pull down
-		pio_sm_put_blocking(pio0, 0, 63);		 // delay from glitch start till glitch end
-		pio_sm_put_blocking(pio0, 0, 66500);	 // delay from glitch end to pll down
-
-		pio_sm_get_blocking(pio0, 0);
-
-		pio_sm_set_enabled(pio0, 0, false);
-
-		pio_sm_restart(pio0, 0);
-
-		pio_remove_program(pio0, &glitch_program, offset);
-
-		gpio_put(DEBUG_LED, 0);
-
-		gpio_init(CPU_RESET);
-		gpio_set_dir(CPU_RESET, GPIO_IN);
-		while (gpio_get(CPU_RESET))
-			;
-	}
-
-	return 0;
+int main() {
+    stdio_init_all();
+    
+    // Configurar pines
+    gpio_init(CPU_RESET_PIN);
+    gpio_init(GLITCH_OUT_PIN);
+    gpio_init(DEBUG_LED_PIN);
+    
+    gpio_set_dir(CPU_RESET_PIN, GPIO_IN);
+    gpio_set_dir(GLITCH_OUT_PIN, GPIO_OUT);
+    gpio_set_dir(DEBUG_LED_PIN, GPIO_OUT);
+    
+    // Configurar interrupción en el flanco de bajada de CPU_RESET_PIN
+    gpio_set_irq_enabled_with_callback(CPU_RESET_PIN, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler);
+    
+    // Inicializar subsistema PIO
+    init_glitch_pio();
+    
+    // Bucle principal
+    while(1) {
+        if(trigger_glitch) {
+            gpio_put(DEBUG_LED_PIN, 1);
+            
+            // Enviar parámetros al PIO (retardo y ancho)
+            pio_sm_put_blocking(glitch_pio, glitch_sm, GLITCH_DELAY_CYCLES);
+            pio_sm_put_blocking(glitch_pio, glitch_sm, GLITCH_WIDTH_CYCLES);
+            
+            gpio_put(DEBUG_LED_PIN, 0);
+            trigger_glitch = false;
+        }
+        __wfi();  // Modo de bajo consumo hasta próxima interrupción
+    }
 }
