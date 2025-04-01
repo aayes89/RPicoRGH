@@ -1,12 +1,13 @@
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
 #include "hardware/irq.h"
-#include "glitch.new.pio"  // Archivo generado desde el código PIO
+#include "glitch.pio.h"  // Archivo generado desde el código PIO
 
 // Configuración de pines
 #define CPU_RESET_PIN    11
 #define GLITCH_OUT_PIN   12
-#define DEBUG_LED_PIN    25
+#define DEBUG_LED_PIN_RED    15  // Pin para el LED rojo
+#define DEBUG_LED_PIN_GREEN  14  // Pin para el LED verde
 
 // Parámetros del glitch
 #define GLITCH_DELAY_CYCLES  20
@@ -39,11 +40,13 @@ int main() {
     // Inicializar hardware (sin stdio)
     gpio_init(CPU_RESET_PIN);
     gpio_init(GLITCH_OUT_PIN);
-    gpio_init(DEBUG_LED_PIN);
+    gpio_init(DEBUG_LED_PIN_RED);
+    gpio_init(DEBUG_LED_PIN_GREEN);
     
     gpio_set_dir(CPU_RESET_PIN, GPIO_IN);
     gpio_set_dir(GLITCH_OUT_PIN, GPIO_OUT);
-    gpio_set_dir(DEBUG_LED_PIN, GPIO_OUT);
+    gpio_set_dir(DEBUG_LED_PIN_RED, GPIO_OUT);
+    gpio_set_dir(DEBUG_LED_PIN_GREEN, GPIO_OUT);
     
     // Configurar interrupción
     gpio_set_irq_enabled_with_callback(CPU_RESET_PIN, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler);
@@ -54,12 +57,21 @@ int main() {
     // Bucle principal
     while(1) {
         if(trigger_glitch) {
-            gpio_put(DEBUG_LED_PIN, 1);
+            // Parpadear LED verde (glitch activo)
+            gpio_put(DEBUG_LED_PIN_GREEN, 1);  // Enciende el LED verde
+            gpio_put(DEBUG_LED_PIN_RED, 0);    // Apaga el LED rojo
+            gpio_put(DEBUG_LED_PIN_GREEN, 0);  // Apaga el LED verde (parpadeo)
             pio_sm_put_blocking(glitch_pio, glitch_sm, GLITCH_DELAY_CYCLES);
             pio_sm_put_blocking(glitch_pio, glitch_sm, GLITCH_WIDTH_CYCLES);
-            gpio_put(DEBUG_LED_PIN, 0);
+            gpio_put(DEBUG_LED_PIN_GREEN, 1);  // Enciende nuevamente el LED verde
+            gpio_put(DEBUG_LED_PIN_RED, 0);    // Apaga el LED rojo
             trigger_glitch = false;
+        } else {
+            // LED rojo cuando no hay glitch
+            gpio_put(DEBUG_LED_PIN_GREEN, 0);  // Apaga el LED verde
+            gpio_put(DEBUG_LED_PIN_RED, 1);    // Enciende el LED rojo
         }
-        __wfi();
+        
+        __wfi();  // Pone el microcontrolador en modo de espera activa
     }
 }
