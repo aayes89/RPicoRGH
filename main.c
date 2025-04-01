@@ -7,7 +7,7 @@
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
 #include "hardware/irq.h"
-#include "glitch.pio.h"  // Archivo generado desde el código PIO
+#include "glitch.new.pio"  // Archivo generado desde el código PIO
 
 // Configuración de pines
 #define CPU_RESET_PIN    11   // Pin para monitorear el reset de la Xbox
