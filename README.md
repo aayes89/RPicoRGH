@@ -16,6 +16,19 @@ make
 
 # TESTS MADE
 - Tested in Xenon although you still get the expected result.
+
+# Connections schema
++------------------------------+                    +-----------------------------+
+| Raspberry Pi Pico            |                    | Xbox 360 Motherboard (Xenon)|
+|------------------------------|                    |-----------------------------|
+| 3.3V   --------------------> |                    |                             |
+| GND    --------------------> | -----------------> | GND                         |
+| GPIO 11 (CPU_RESET_PIN) ---->|                    | (CPU_RESET)                 |
+| GPIO 12 (GLITCH_OUT_PIN) --->|                    | (CPU_PLL)                   |
+| GPIO 14 (LED verde)          |                    |                             |
+| GPIO 15 (LED rojo)           |                    |                             |
++------------------------------+                    +-----------------------------+
+
  
 # TODO
 - Add pin scheme for each Xbox 360 model, although by objective, the Xenon, Opus and Zephyr versions; since the Falcon, Jasper and onwards, have their methods for RGH3
