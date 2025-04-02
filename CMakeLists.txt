@@ -15,7 +15,7 @@ pico_sdk_init()
 # Tell CMake where to find the executable source file
 add_executable(glitch_project
     src/main.c
-    src/glitch.pio.h
+    src/glitch.pio
 )
 
 # Generate the PIO header for glitch.pio
@@ -26,6 +26,7 @@ target_link_libraries(glitch_project
     pico_stdlib
     hardware_gpio
     hardware_pio
+	hardware_sync
 )
 
 # Enable USB output, disable UART output
