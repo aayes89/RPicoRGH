@@ -1,6 +1,7 @@
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
 #include "hardware/irq.h"
+#include "hardware/sync.h" // para funcion __wfi()
 #include "glitch.pio.h"  // Archivo generado desde el código PIO
 
 // Configuración de pines
