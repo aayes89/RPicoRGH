@@ -18,18 +18,43 @@ make
 - Tested in Xenon although you still get the expected result.
 
 # Connections schema
-+------------------------------+                    +-----------------------------+
-| Raspberry Pi Pico            |                    | Xbox 360 Motherboard (Xenon)|
-|------------------------------|                    |-----------------------------|
-| 3.3V   --------------------> |                    |                             |
-| GND    --------------------> | -----------------> | GND                         |
-| GPIO 11 (CPU_RESET_PIN) ---->|                    | (CPU_RESET)                 |
-| GPIO 12 (GLITCH_OUT_PIN) --->|                    | (CPU_PLL)                   |
-| GPIO 14 (LED verde)          |                    |                             |
-| GPIO 15 (LED rojo)           |                    |                             |
-+------------------------------+                    +-----------------------------+
+<body>
+    <table>
+        <thead>
+            <tr>
+                <th>Raspberry Pi Pico</th>
+                <th>Xbox 360 Motherboard (Xenon)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>3.3V</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>GND</td>
+                <td>GND</td>
+            </tr>
+            <tr>
+                <td>GPIO 11 </td>
+                <td>CPU_RESET</td>
+            </tr>
+            <tr>
+                <td>GPIO 12 </td>
+                <td>CPU_PLL</td>
+            </tr>
+            <tr>
+                <td>GPIO 14 (Green LED)</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>GPIO 15 (Red LED - Optional)</td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+    </body>
 
- 
 # TODO
 - Add pin scheme for each Xbox 360 model, although by objective, the Xenon, Opus and Zephyr versions; since the Falcon, Jasper and onwards, have their methods for RGH3
 - Compile the uf2 file
