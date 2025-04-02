@@ -13,6 +13,9 @@ cd build
 cmake ..
 make
 ```
+    
+if error occurs use:  ```cmake -DPICOTOOL_FORCE_FETCH_FROM_GIT=ON ..```
+
 
 # TESTS MADE
 - Tested in Xenon although you still get the expected result.
